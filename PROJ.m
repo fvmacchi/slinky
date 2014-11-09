@@ -90,11 +90,18 @@ F0 = zeros((3*NODES_SIZE), 1);
 U1 = zeros((3*NODES_SIZE), 1);
 V1 = zeros((3*NODES_SIZE), 1);
 A1 = zeros((3*NODES_SIZE), 1);
-F1 = zeros((3*NODES_SIZE), 1);
+F = zeros((3*NODES_SIZE), 1);
 
-for i=1:NODES_SIZE
+for i=5:NODES_SIZE
    A0(i*3) = GRAVITY;
 end
+
+F = zeros(NODES_SIZE*3, 1);
+for i = 1:NODES_SIZE
+    F(i*3) = GM(i*3,i*3)*GRAVITY;
+end
+% % % apply mass to last node
+F(NODES_SIZE*3) = F(NODES_SIZE*3) + GRAVITY*ATTACHED_MASS;
 
 % % % Iterate through timesteps
 while time < TIME_LIMIT
@@ -105,36 +112,19 @@ while time < TIME_LIMIT
     helper_A = 2/(BETA*DELTA_T^2)*GM + GK + (2*GAMMA)/(BETA*DELTA_T)*GC;
     helper_B = 2/(BETA*DELTA_T^2)*GM + (2*GAMMA)/(BETA*DELTA_T)*GC;
     helper_C = 2/(BETA*DELTA_T)*GM + (2*GAMMA/BETA - 1)*GC;
-    helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);
-    helper_A_inverse = inv(helper_A);
-
-    % % % FRANCESCO: I know you're going to have issue with be setting
-    % constraints like this and are going to bring up mixed matrix
-    % solutions. We'll discuss later. Just bare with me for a bit
-    time = time + DELTA_T;
-    F1 = GM*A0 + GC*V0 + GK*U0;
-    % % % apply mass to last node
-    F1(NODES_SIZE*3) = GRAVITY*ATTACHED_MASS;
-
-    % % % determine the next snapshot of the displacement vector
-    U1 = helper_A_inverse*(F1 + helper_B*U0 + helper_C*V0 + helper_D*A0);
-    % % % constrain displacement
-    U1(1:3) = [0; 0; 0;];
+    helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);   
 
     % % % Use gauss siedel to solve for U1 and F1
-    solver(helper_A, U1, F1 + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:3], [4:NODES_SIZE]);
+    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE]);
     
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;
-    % % % constrain accelerations
-    A1(1:3) = [0; 0; 0;];
 
     % % % determine the next snapshot of the velocity vector
     V1 = DELTA_T*((1-GAMMA)*A0 - GAMMA*A1) + V0;
-    % % % constrain velocity
-    V1(1:3) = [0; 0; 0;];
 
     % % % Iterate to next time
+    time = time + DELTA_T; 
     U0 = U1;
     V0 = V1;
     A0 = A1;
