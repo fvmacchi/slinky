@@ -68,10 +68,10 @@ for i = 1:(NUMBER_OF_SEGMENTS)
     frame_b_node_3 = (i-1)*5 + 8;
     frame_b_node_4 = (i-1)*5 + 9;
     
-    CONNECTIONS((i-1)*16+1,:) = [frame_a_node_1 frame_a_node_2];
-    CONNECTIONS((i-1)*16+2,:) = [frame_a_node_2 frame_a_node_3];
-    CONNECTIONS((i-1)*16+3,:) = [frame_a_node_3 frame_a_node_4];
-    CONNECTIONS((i-1)*16+4,:) = [frame_a_node_4 frame_a_node_1];
+    CONNECTIONS((i-1)*16+1,:) = [frame_a_node_1 frame_a_node_3];
+    CONNECTIONS((i-1)*16+2,:) = [frame_a_node_2 frame_a_node_4];
+    CONNECTIONS((i-1)*16+3,:) = [frame_a_node_1 frame_a_node_2];
+    CONNECTIONS((i-1)*16+4,:) = [frame_a_node_3 frame_a_node_4];
     
     CONNECTIONS((i-1)*16+5,:) = [frame_a_node_1 frame_a_node_5];
     CONNECTIONS((i-1)*16+6,:) = [frame_a_node_2 frame_a_node_5];
