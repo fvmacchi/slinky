@@ -121,6 +121,9 @@ while time < TIME_LIMIT
     % % % constrain displacement
     U1(1:3) = [0; 0; 0;];
 
+    % % % Use gauss siedel to solve for U1 and F1
+    solver(helper_A, U1, F1 + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:3], [4:NODES_SIZE]);
+    
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;
     % % % constrain accelerations
