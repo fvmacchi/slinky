@@ -115,7 +115,7 @@ while time < TIME_LIMIT
     helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);   
 
     % % % Use gauss siedel to solve for U1 and F1
-    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE]);
+    [Usolver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE]);
     
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;
