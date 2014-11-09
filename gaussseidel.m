@@ -8,7 +8,9 @@ function [ANSWER] = gaussseidel (A, B)
     OldValues(1) = 10000;
     %abs(sum(NewValues) - sum(OldValues))
 
-    while(abs(sum(NewValues) - sum(OldValues)) > 0.0005*array_order)
+    NewSum = sum(NewValues);
+    OldSum = sum(OldValues);
+    while(abs((NewSum - OldSum)/OldSum) > 0.01)
     %for k = 1:20
         OldValues(:,1) = NewValues(:,1);
         for i=1:array_order
@@ -21,6 +23,8 @@ function [ANSWER] = gaussseidel (A, B)
             end 
             NewValues(i,1) = NewValues(i,1) / A(i,i);
         end
+        NewSum = sum(NewValues);
+        OldSum = sum(OldValues);
     end
-    ANSWER(:,1) = NewValues(:,1)
+    ANSWER(:,1) = NewValues(:,1);
 end

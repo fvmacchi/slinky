@@ -20,28 +20,40 @@ COIL_DIAMETER = (0.06349 + 0.06849)/2;
 WIRE_THICKNESS = 0.0025;
 WIRE_HEIGHT = PITCH;
 NUMBER_OF_COILS = 2;
-TOTAL_SLINKY_MASS = 0.2;
+TOTAL_SLINKY_MASS = 0.198*(NUMBER_OF_COILS/80);
 
 GRAVITY = -9.81;
 ATTACHED_MASS = 1;
 
-% % % Find K value
+% % % Find K values
 E = 16.7e6;
-A = WIRE_THICKNESS*WIRE_HEIGHT;
-L = pi*COIL_DIAMETER/FRAMES_PER_COIL;
-K0 = E*A/L;
-theta = acos(L/sqrt(WIRE_THICKNESS^2 + WIRE_HEIGHT^2 + L^2));
-k_constant = K0/(4+2*cos(theta));
-K_constant = @(i) k_constant;
+l = pi*COIL_DIAMETER/FRAMES_PER_COIL;
+kx = E*WIRE_HEIGHT*WIRE_THICKNESS/l;
+ky = E*WIRE_THICKNESS*l/WIRE_HEIGHT;
+k2 = (kx-ky)*(sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2))/(2*l-WIRE_HEIGHT);
+k1 = (kx-2*k2*l/sqrt(WIRE_THICKNESS^2+WIRE_HEIGHT^2+l^2))/4;
 
 % % % Constants for implicit dynamics
 BETA = 0.25;
 GAMMA = 0.50;
 DELTA_T = 0.1;
-TIME_LIMIT = 10;
+TIME_LIMIT = 0.5;
 
 % % % Create node an connection matrices
 [NODES, CONNECTIONS, NODES_SIZE, NUMBER_OF_CONNECTIONS, NUMBER_OF_SEGMENTS] = generatenodes(FRAMES_PER_COIL, PITCH, COIL_DIAMETER, WIRE_THICKNESS, WIRE_HEIGHT, NUMBER_OF_COILS);
+
+% % % Add K information in the connections
+Ks = zeros(NUMBER_OF_CONNECTIONS,1);
+for i = 1:NUMBER_OF_CONNECTIONS
+    id = mod(i,16);
+    switch id
+    case [0,1,2,3,4,13,14,15] 
+        Ks(i) = k1;
+    case [5,6,7,8,9,10,11,12]
+        Ks(i) = k2;
+    end
+end
+CONNECTIONS = [CONNECTIONS Ks];
 
 % % % Genereate global mass matrix, GM
 GM = zeros(NODES_SIZE*3);
@@ -68,6 +80,9 @@ for i = 1:NUMBER_OF_CONNECTIONS
     GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,1)-2:3*CONNECTIONS(i,1)) = GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,1)-2:3*CONNECTIONS(i,1)) + local_m(4:6,1:3);
     GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2)) = GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2)) + local_m(4:6,4:6);
 end
+GM(NODES_SIZE*3-2,NODES_SIZE*3-2) = GM(NODES_SIZE*3-2,NODES_SIZE*3-2) + ATTACHED_MASS;
+GM(NODES_SIZE*3-1,NODES_SIZE*3-1) = GM(NODES_SIZE*3-1,NODES_SIZE*3-1) + ATTACHED_MASS;
+GM(NODES_SIZE*3,NODES_SIZE*3) = GM(NODES_SIZE*3,NODES_SIZE*3) + ATTACHED_MASS;
 
 % % % Used for visualizing. Very expensive to run
 if 1
@@ -100,13 +115,11 @@ F = zeros(NODES_SIZE*3, 1);
 for i = 1:NODES_SIZE
     F(i*3) = GM(i*3,i*3)*GRAVITY;
 end
-% % % apply mass to last node
-F(NODES_SIZE*3) = F(NODES_SIZE*3) + GRAVITY*ATTACHED_MASS;
 
 % % % Iterate through timesteps
 while time < TIME_LIMIT
     % % % FRANCESCO: plug in your bits/parts/pieces here (whose whichever sounds least dirty)
-    [GK, GC] = assembleMatrices(NODES, CONNECTIONS, K_constant, 0);
+    [GK, GC] = assembleMatrices(NODES, CONNECTIONS, 0);
 
     
     helper_A = 2/(BETA*DELTA_T^2)*GM + GK + (2*GAMMA)/(BETA*DELTA_T)*GC;
@@ -115,7 +128,7 @@ while time < TIME_LIMIT
     helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);   
 
     % % % Use gauss siedel to solve for U1 and F1
-    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE]);
+    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE*3]);
     
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;

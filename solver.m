@@ -5,8 +5,8 @@ Kfe = K(FREE, FIXED);
 Bf = b([FREE]);
 xe = x([FIXED]);
 
-xf = gaussseidel(Kf, Bf - Kfe*xe);
-
+%xf = gaussseidel(Kf, Bf - Kfe*xe);
+xf = Kf\(Bf - Kfe*xe);
 x(FREE) = xf;
 
 b = K*x;
