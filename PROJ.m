@@ -19,8 +19,8 @@ COIL_DIAMETER = (0.06349 + 0.06849)/2;
 % % % wire guage
 WIRE_THICKNESS = 0.0025;
 WIRE_HEIGHT = PITCH;
-NUMBER_OF_COILS = 2;
-TOTAL_SLINKY_MASS = 0.2;
+NUMBER_OF_COILS = 5;
+TOTAL_SLINKY_MASS = 0.198*(NUMBER_OF_COILS/80);
 
 GRAVITY = -9.81;
 ATTACHED_MASS = 1;
@@ -38,7 +38,7 @@ K_constant = @(i) k_constant;
 BETA = 0.25;
 GAMMA = 0.50;
 DELTA_T = 0.1;
-TIME_LIMIT = 10;
+TIME_LIMIT = 0.1;
 
 % % % Create node an connection matrices
 [NODES, CONNECTIONS, NODES_SIZE, NUMBER_OF_CONNECTIONS, NUMBER_OF_SEGMENTS] = generatenodes(FRAMES_PER_COIL, PITCH, COIL_DIAMETER, WIRE_THICKNESS, WIRE_HEIGHT, NUMBER_OF_COILS);
@@ -70,7 +70,7 @@ for i = 1:NUMBER_OF_CONNECTIONS
 end
 
 % % % Used for visualizing. Very expensive to run
-if 1
+if 0
     figure(1);
     scatter3(NODES(:,1),NODES(:,2),NODES(:,3));
     hold on;
@@ -115,7 +115,7 @@ while time < TIME_LIMIT
     helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);   
 
     % % % Use gauss siedel to solve for U1 and F1
-    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE]);
+    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE*3]);
     
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;
