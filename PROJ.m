@@ -25,14 +25,13 @@ TOTAL_SLINKY_MASS = 0.198*(NUMBER_OF_COILS/80);
 GRAVITY = -9.81;
 ATTACHED_MASS = 1;
 
-% % % Find K value
+% % % Find K values
 E = 16.7e6;
-A = WIRE_THICKNESS*WIRE_HEIGHT;
-L = pi*COIL_DIAMETER/FRAMES_PER_COIL;
-K0 = E*A/L;
-theta = acos(L/sqrt(WIRE_THICKNESS^2 + WIRE_HEIGHT^2 + L^2));
-k_constant = K0/(4+2*cos(theta));
-K_constant = @(i) k_constant;
+l = pi*COIL_DIAMETER/FRAMES_PER_COIL;
+kx = E*WIRE_HEIGHT*WIRE_THICKNESS/l;
+ky = E*WIRE_THICKNESS*l/WIRE_HEIGHT;
+k2 = (kx-ky)*(sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2))/(2*l-WIRE_HEIGHT);
+k1 = (kx-2*k2*l/sqrt(WIRE_THICKNESS^2+WIRE_HEIGHT^2+l^2))/4;
 
 % % % Constants for implicit dynamics
 BETA = 0.25;
@@ -42,6 +41,19 @@ TIME_LIMIT = 0.5;
 
 % % % Create node an connection matrices
 [NODES, CONNECTIONS, NODES_SIZE, NUMBER_OF_CONNECTIONS, NUMBER_OF_SEGMENTS] = generatenodes(FRAMES_PER_COIL, PITCH, COIL_DIAMETER, WIRE_THICKNESS, WIRE_HEIGHT, NUMBER_OF_COILS);
+
+% % % Add K information in the connections
+Ks = zeros(NUMBER_OF_CONNECTIONS,1);
+for i = 1:NUMBER_OF_CONNECTIONS
+    id = mod(i,16);
+    switch id
+    case [0,1,2,3,4,13,14,15] 
+        Ks(i) = k1;
+    case [5,6,7,8,9,10,11,12]
+        Ks(i) = k2;
+    end
+end
+CONNECTIONS = [CONNECTIONS Ks];
 
 % % % Genereate global mass matrix, GM
 GM = zeros(NODES_SIZE*3);
@@ -106,7 +118,7 @@ F(NODES_SIZE*3) = F(NODES_SIZE*3) + GRAVITY*ATTACHED_MASS;
 % % % Iterate through timesteps
 while time < TIME_LIMIT
     % % % FRANCESCO: plug in your bits/parts/pieces here (whose whichever sounds least dirty)
-    [GK, GC] = assembleMatrices(NODES, CONNECTIONS, K_constant, 0);
+    [GK, GC] = assembleMatrices(NODES, CONNECTIONS, 0);
 
     
     helper_A = 2/(BETA*DELTA_T^2)*GM + GK + (2*GAMMA)/(BETA*DELTA_T)*GC;

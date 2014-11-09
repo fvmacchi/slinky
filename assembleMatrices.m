@@ -1,4 +1,4 @@
-function [K, C] = assembleMatrices(NODES, CONNECTIONS, k_constant, DAMPENING)
+function [K, C] = assembleMatrices(NODES, CONNECTIONS, DAMPENING)
 
     nodesSize = size(NODES);
     conSize = size(CONNECTIONS);
@@ -28,7 +28,7 @@ function [K, C] = assembleMatrices(NODES, CONNECTIONS, k_constant, DAMPENING)
             -x*y -y^2 -y*z x*y y^2 y*z;
             -x*z -y*z -z^2 x*z y*z z^2;
         ];
-        k = k_constant(i)/hyp*T;
+        k = conn(3)/hyp*T;
         c = DAMPENING*T;
         K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) = K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) + k(1:3,1:3);
         K(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) = K(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) + k(1:3,4:6);
