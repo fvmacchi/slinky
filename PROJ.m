@@ -12,18 +12,18 @@ clc;
 
 % % % INPUTS FOR DEFINING INITIAL STATE OF SLINKY
 % % % cross sectional slices in one turn
-FRAMES_PER_COIL = 10;
+FRAMES_PER_COIL = 16;
 % % % distance between centrelines of adjacent coils when compressed
 PITCH = 0.00065;
 COIL_DIAMETER = (0.06349 + 0.06849)/2;
 % % % wire guage
 WIRE_THICKNESS = 0.0025;
 WIRE_HEIGHT = PITCH;
-NUMBER_OF_COILS = 25;
+NUMBER_OF_COILS = 7;
 TOTAL_SLINKY_MASS = 0.198*(NUMBER_OF_COILS/80);
 
 GRAVITY = -9.81;
-ATTACHED_MASS = 0.01035;
+ATTACHED_MASS = 0.03;
 
 % % % Find K values
 E = 16.7e6;
@@ -33,13 +33,14 @@ ky = E*WIRE_THICKNESS*l/WIRE_HEIGHT;
 % k2 = (kx-ky)*(sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2))/(2*l-WIRE_HEIGHT);
 % k1 = (kx-2*k2*l/sqrt(WIRE_THICKNESS^2+WIRE_HEIGHT^2+l^2))/4;
 
-k_constant = 1e10;
+%%%k_constant = E*WIRE_HEIGHT*WIRE_THICKNESS/l/4/(1 + l/sqrt(l^2+WIRE_HEIGHT^2) + l/sqrt(l^2+WIRE_THICKNESS^2) + l/sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2));
+k_constant = 5E10;
 
 % % % Constants for implicit dynamics
 BETA = 0.25;
 GAMMA = 0.50;
-DELTA_T = 0.05;
-TIME_LIMIT = 1;
+DELTA_T = 0.01;
+TIME_LIMIT = 0.5;
 
 % % % Create node an connection matrices
 [NODES, CONNECTIONS, NODES_SIZE, NUMBER_OF_CONNECTIONS, NUMBER_OF_SEGMENTS] = generatenodes(FRAMES_PER_COIL, PITCH, COIL_DIAMETER, WIRE_THICKNESS, WIRE_HEIGHT, NUMBER_OF_COILS);
@@ -87,9 +88,15 @@ for i = 1:NUMBER_OF_CONNECTIONS
     GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,1)-2:3*CONNECTIONS(i,1)) = GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,1)-2:3*CONNECTIONS(i,1)) + local_m(4:6,1:3);
     GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2)) = GM(3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2), 3*CONNECTIONS(i,2)-2:3*CONNECTIONS(i,2)) + local_m(4:6,4:6);
 end
-GM(NODES_SIZE*3-2,NODES_SIZE*3-2) = GM(NODES_SIZE*3-2,NODES_SIZE*3-2) + ATTACHED_MASS;
-GM(NODES_SIZE*3-1,NODES_SIZE*3-1) = GM(NODES_SIZE*3-1,NODES_SIZE*3-1) + ATTACHED_MASS;
-GM(NODES_SIZE*3,NODES_SIZE*3) = GM(NODES_SIZE*3,NODES_SIZE*3) + ATTACHED_MASS;
+
+OTHER_HANG_POINT = 4*round(NUMBER_OF_SEGMENTS - FRAMES_PER_COIL/2);
+for i = 1:4
+    for j=1:3
+        GM((OTHER_HANG_POINT+1-i)*3+1-j,(OTHER_HANG_POINT+1-i)*3+1-j) = GM((OTHER_HANG_POINT+1-i)*3+1-j,(OTHER_HANG_POINT+1-i)*3+1-j) + ATTACHED_MASS/8;
+        GM((NODES_SIZE+1-i)*3+1-j,(NODES_SIZE+1-i)*3+1-j) = GM((NODES_SIZE+1-i)*3+1-j,(NODES_SIZE+1-i)*3+1-j) + ATTACHED_MASS/8;
+    end
+end
+
 
 % % % Used for visualizing. Very expensive to run
 if 1
@@ -102,6 +109,7 @@ if 1
             hold on;
     end
 end
+
 
 % % % Initialize vectors for displacement, velocity, acceleration and force
 time = 0;
@@ -122,9 +130,21 @@ for i = 5:NODES_SIZE
     F(i*3) = GM(i*3,i*3)*GRAVITY;
 end
 
+%%%F(NODES_SIZE*3) = ATTACHED_MASS*GRAVITY;
+
+
+for i = 5:NODES_SIZE
+    A0(i*3) = GRAVITY;
+end
+
 % % % Iterate through timesteps
 while time < TIME_LIMIT
-    % % % FRANCESCO: plug in your bits/parts/pieces here (whose whichever sounds least dirty)
+    % % % FRANCESCO: plug in your bits/parts/pieces here (whichever sounds least dirty)
+    for i=1:NODES_SIZE
+       NODES(i,1) = NODES(i,1) + U0(i*3-2);
+       NODES(i,2) = NODES(i,2) + U0(i*3-1);
+       NODES(i,3) = NODES(i,3) + U0(i*3);
+    end
     [GK, GC] = assembleMatrices(NODES, CONNECTIONS, 0);
 
     
@@ -147,7 +167,8 @@ while time < TIME_LIMIT
     U0 = U1;
     V0 = V1;
     A0 = A1;
-    lastNode = [lastNode ; U1(NODES_SIZE*3)];
+    
+    lastNode = [lastNode ; NODES(NODES_SIZE,3)];
 end
 
 figure(3)
@@ -155,18 +176,18 @@ plot(lastNode);
 
 % % % Post visualization
 if 1
-    NEW_NODES = NODES;
-    for i=1:NODES_SIZE
-       NEW_NODES(i,1) = NEW_NODES(i,1) + U0(i*3-2);
-       NEW_NODES(i,2) = NEW_NODES(i,2) + U0(i*3-1);
-       NEW_NODES(i,3) = NEW_NODES(i,3) + U0(i*3);
-    end
+%     NEW_NODES = NODES;
+%     for i=1:NODES_SIZE
+%        NEW_NODES(i,1) = NEW_NODES(i,1) + U0(i*3-2);
+%        NEW_NODES(i,2) = NEW_NODES(i,2) + U0(i*3-1);
+%        NEW_NODES(i,3) = NEW_NODES(i,3) + U0(i*3);
+%     end
   
     figure(2);
-    scatter3(NEW_NODES(:,1),NEW_NODES(:,2),NEW_NODES(:,3));
+    scatter3(NODES(:,1),NODES(:,2),NODES(:,3));
     hold on;
     for i=1:NUMBER_OF_CONNECTIONS
-            tmp = [NEW_NODES(CONNECTIONS(i,1),:) ; NEW_NODES(CONNECTIONS(i,2),:)];
+            tmp = [NODES(CONNECTIONS(i,1),:) ; NODES(CONNECTIONS(i,2),:)];
             plot3(tmp(:,1),tmp(:,2),tmp(:,3), '-g');
             hold on;
     end
