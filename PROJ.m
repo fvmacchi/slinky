@@ -12,32 +12,34 @@ clc;
 
 % % % INPUTS FOR DEFINING INITIAL STATE OF SLINKY
 % % % cross sectional slices in one turn
-FRAMES_PER_COIL = 16;
+FRAMES_PER_COIL = 10;
 % % % distance between centrelines of adjacent coils when compressed
 PITCH = 0.00065;
 COIL_DIAMETER = (0.06349 + 0.06849)/2;
 % % % wire guage
 WIRE_THICKNESS = 0.0025;
 WIRE_HEIGHT = PITCH;
-NUMBER_OF_COILS = 2;
+NUMBER_OF_COILS = 25;
 TOTAL_SLINKY_MASS = 0.198*(NUMBER_OF_COILS/80);
 
 GRAVITY = -9.81;
-ATTACHED_MASS = 1;
+ATTACHED_MASS = 0.01035;
 
 % % % Find K values
 E = 16.7e6;
 l = pi*COIL_DIAMETER/FRAMES_PER_COIL;
 kx = E*WIRE_HEIGHT*WIRE_THICKNESS/l;
 ky = E*WIRE_THICKNESS*l/WIRE_HEIGHT;
-k2 = (kx-ky)*(sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2))/(2*l-WIRE_HEIGHT);
-k1 = (kx-2*k2*l/sqrt(WIRE_THICKNESS^2+WIRE_HEIGHT^2+l^2))/4;
+% k2 = (kx-ky)*(sqrt(l^2+WIRE_THICKNESS^2+WIRE_HEIGHT^2))/(2*l-WIRE_HEIGHT);
+% k1 = (kx-2*k2*l/sqrt(WIRE_THICKNESS^2+WIRE_HEIGHT^2+l^2))/4;
+
+k_constant = 1e10;
 
 % % % Constants for implicit dynamics
 BETA = 0.25;
 GAMMA = 0.50;
-DELTA_T = 0.1;
-TIME_LIMIT = 0.5;
+DELTA_T = 0.05;
+TIME_LIMIT = 1;
 
 % % % Create node an connection matrices
 [NODES, CONNECTIONS, NODES_SIZE, NUMBER_OF_CONNECTIONS, NUMBER_OF_SEGMENTS] = generatenodes(FRAMES_PER_COIL, PITCH, COIL_DIAMETER, WIRE_THICKNESS, WIRE_HEIGHT, NUMBER_OF_COILS);
@@ -45,22 +47,27 @@ TIME_LIMIT = 0.5;
 % % % Add K information in the connections
 Ks = zeros(NUMBER_OF_CONNECTIONS,1);
 for i = 1:NUMBER_OF_CONNECTIONS
-    id = mod(i,16);
-    switch id
-    case [0,1,2,3,4,13,14,15] 
-        Ks(i) = k1;
-    case [5,6,7,8,9,10,11,12]
-        Ks(i) = k2;
-    end
+%     id = mod(i,12);
+%     switch id
+%     case {1,2}
+%         Ks(i) = 5e25;
+%     case {3,4}
+%         Ks(i) = 5e25;
+%     case {0,9,10,11}
+%         Ks(i) = 5e25;
+%     case {5,6,7,8}
+%         Ks(i) = 5e25;
+%     end
+Ks(i) = k_constant;
 end
 CONNECTIONS = [CONNECTIONS Ks];
 
 % % % Genereate global mass matrix, GM
 GM = zeros(NODES_SIZE*3);
 MASS_PER_SEGMENT = TOTAL_SLINKY_MASS/NUMBER_OF_SEGMENTS;
-sample_segment_lengths = zeros(20,1);
+sample_segment_lengths = zeros(16,1);
 total_segment_length = 0;
-for i = 1:20
+for i = 1:22
     node1 = NODES(CONNECTIONS(i,1),:);
     node2 = NODES(CONNECTIONS(i,2),:);
     sample_segment_lengths(i) = sqrt((node1(1)-node2(1))^2 + (node1(2)-node2(2))^2 + (node1(3)-node2(3))^2);
@@ -106,13 +113,12 @@ U1 = zeros((3*NODES_SIZE), 1);
 V1 = zeros((3*NODES_SIZE), 1);
 A1 = zeros((3*NODES_SIZE), 1);
 F = zeros((3*NODES_SIZE), 1);
+U = zeros((3*NODES_SIZE),1);
 
-for i=5:NODES_SIZE
-   A0(i*3) = GRAVITY;
-end
+lastNode = [];
 
 F = zeros(NODES_SIZE*3, 1);
-for i = 1:NODES_SIZE
+for i = 5:NODES_SIZE
     F(i*3) = GM(i*3,i*3)*GRAVITY;
 end
 
@@ -128,7 +134,7 @@ while time < TIME_LIMIT
     helper_D = (1 - BETA)/BETA*GM + DELTA_T*GC*((GAMMA - 1)+(1 - BETA)/BETA*GAMMA);   
 
     % % % Use gauss siedel to solve for U1 and F1
-    [U1, INTERNAL_F] = solver(helper_A, U1, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE*3]);
+    [U1, INTERNAL_F] = solver(helper_A, U, F + helper_B*U0 + helper_C*V0 + helper_D*A0, [1:12], [13:NODES_SIZE*3]);
     
     % % % determine the next snapshot of the acceleration vector
     A1 = 2/(BETA*DELTA_T)*(U1-U0)/DELTA_T - 2/(BETA*DELTA_T)*V0 - (1 - BETA)/BETA*A0;
@@ -141,7 +147,11 @@ while time < TIME_LIMIT
     U0 = U1;
     V0 = V1;
     A0 = A1;
+    lastNode = [lastNode ; U1(NODES_SIZE*3)];
 end
+
+figure(3)
+plot(lastNode);
 
 % % % Post visualization
 if 1

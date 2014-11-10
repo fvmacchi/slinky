@@ -28,12 +28,12 @@ function [K, C] = assembleMatrices(NODES, CONNECTIONS, DAMPENING)
             -x*y -y^2 -y*z x*y y^2 y*z;
             -x*z -y*z -z^2 x*z y*z z^2;
         ];
-        k = conn(3)/hyp*T;
+        k = conn(3)*T;
         c = DAMPENING*T;
         K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) = K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) + k(1:3,1:3);
         K(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) = K(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) + k(1:3,4:6);
-        K(conn(2)*3-2:conn(2)*3, conn(1)*3-2:conn(1)*3) = K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) + k(4:6,1:3);
-        K(conn(2)*3-2:conn(2)*3, conn(2)*3-2:conn(2)*3) = K(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) + k(4:6,4:6);
+        K(conn(2)*3-2:conn(2)*3, conn(1)*3-2:conn(1)*3) = K(conn(2)*3-2:conn(2)*3, conn(1)*3-2:conn(1)*3) + k(4:6,1:3);
+        K(conn(2)*3-2:conn(2)*3, conn(2)*3-2:conn(2)*3) = K(conn(2)*3-2:conn(2)*3, conn(2)*3-2:conn(2)*3) + k(4:6,4:6);
         C(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) = C(conn(1)*3-2:conn(1)*3, conn(1)*3-2:conn(1)*3) + c(1:3,1:3);
         C(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) = C(conn(1)*3-2:conn(1)*3, conn(2)*3-2:conn(2)*3) + c(1:3,4:6);
         C(conn(2)*3-2:conn(2)*3, conn(1)*3-2:conn(1)*3) = C(conn(2)*3-2:conn(2)*3, conn(1)*3-2:conn(1)*3) + c(4:6,1:3);

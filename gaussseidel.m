@@ -10,7 +10,7 @@ function [ANSWER] = gaussseidel (A, B)
 
     NewSum = sum(NewValues);
     OldSum = sum(OldValues);
-    while(abs((NewSum - OldSum)/OldSum) > 0.01)
+    while(abs((NewSum - OldSum)/OldSum) > 0.006)
     %for k = 1:20
         OldValues(:,1) = NewValues(:,1);
         for i=1:array_order
